@@ -21,7 +21,7 @@
         
         /* ⌚ WEARABLE DEVICE UI (SENDER) */
         .wearable-container {
-            width: 340px; height: 420px; background: #000; border-radius: 60px;
+            width: 340px; height: 450px; background: #000; border-radius: 60px;
             border: 14px solid #334155; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.1);
             position: relative; overflow: hidden; display: flex; flex-direction: column;
         }
@@ -46,7 +46,7 @@
         #camera-feed { width: 100%; border-radius: 12px; background: #222; margin-bottom: 10px; object-fit: cover; height: 180px; }
         #canvas-capture { display: none; }
         
-        /* 🔒 SYSTEM LOGS (To show architecture in action) */
+        /* 🔒 SYSTEM LOGS */
         .sys-log { font-family: monospace; font-size: 0.7rem; color: #4ade80; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: left; }
         
         /* 📱 RECIPIENT VIEWER UI */
@@ -58,8 +58,7 @@
         
         /* 🔐 AUTHENTICATION GATE */
         .auth-gate { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 24px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); max-width: 400px; width: 100%; }
-        .fingerprint-icon { font-size: 4rem; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--accent)); cursor: pointer; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.7; transform: scale(1); } }
+        #recipient-password { text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-weight: bold; background: rgba(0,0,0,0.5); border: 2px solid var(--accent); }
         
         /* 🎨 ANIMATION ENGINE */
         .animated-text { font-family: 'Pacifico', cursive; font-size: 3rem; color: #fde047; text-shadow: 0 0 20px rgba(253,224,71,0.5); opacity: 0; }
@@ -88,11 +87,11 @@
         <div id="screen-compose" class="screen active">
             <h2>🎂 Birthday Wish</h2>
             <input type="text" id="contact-name" placeholder="Contact Name" value="Alex">
-            <select id="theme-selector">
-                <option value="party">Theme: Fun & Party</option>
-                <option value="elegant">Theme: Elegant Sparkle</option>
-            </select>
-            <textarea id="wish-message" rows="3" placeholder="Voice/Text Message...">Happy 25th Birthday! Here is the memory from last night! 🎉</textarea>
+            <textarea id="wish-message" rows="2" placeholder="Message...">Happy 25th Birthday! 🎉</textarea>
+            
+            <!-- NEW: Password Input -->
+            <input type="password" id="wish-password" placeholder="Set Password (e.g. 1234)" style="border: 2px solid var(--accent);">
+            
             <button onclick="navTo('screen-capture')">Next: Capture Moment 📸</button>
         </div>
 
@@ -119,7 +118,7 @@
             <div id="qrcode"></div>
             <button class="btn-success" onclick="copySecureUrl()">📋 Copy Secure Link</button>
             <button onclick="testRecipientView()" style="background:transparent; border:1px solid #475569; color:white;">👁️ Test View</button>
-            <div style="font-size: 0.7rem; text-align: center; margin-top:10px; color:#94a3b8;">Key hidden in URL #fragment.</div>
+            <div style="font-size: 0.7rem; text-align: center; margin-top:10px; color:#94a3b8;">Protected by AES-256 + Password</div>
         </div>
     </div>
 
@@ -128,11 +127,14 @@
     <!-- ========================================== -->
     <div id="viewer-device" class="viewer-container">
         
-        <!-- Auth Gate -->
+        <!-- Auth Gate with Password -->
         <div id="auth-gate" class="auth-gate">
-            <div class="fingerprint-icon" onclick="authenticateRecipient()">👆</div>
-            <h2 style="color:white; font-size:1.5rem;">Confidential Wish</h2>
-            <p style="color:#94a3b8; font-size:0.9rem;">Tap fingerprint to decrypt & view.</p>
+            <h2 style="color:white; font-size:1.8rem; margin-bottom: 5px;">🔒 Private Wish</h2>
+            <p style="color:#94a3b8; font-size:0.9rem; margin-bottom: 20px;">Enter the secret password to decrypt.</p>
+            
+            <input type="password" id="recipient-password" placeholder="••••">
+            <button class="btn-success" onclick="authenticateRecipient()">🔓 Unlock Wish</button>
+            
             <div class="sys-log" style="text-align: center; margin-top:20px;">
                 E2E Encrypted • 1 View Only • Auto-Destruct
             </div>
@@ -156,6 +158,12 @@
 
         // --- MODULE: WEARABLE UI CONTROLLER ---
         function navTo(screenId) {
+            // Basic validation
+            if (screenId === 'screen-capture' && !document.getElementById('wish-password').value) {
+                alert("Please set a password to secure the wish!");
+                return;
+            }
+
             document.querySelectorAll('.wearable-container .screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
             
@@ -170,8 +178,7 @@
                 document.getElementById('camera-feed').srcObject = stream;
                 AppState.cameraStream = stream;
             } catch (err) {
-                alert("Camera access denied. We will use a fallback image to demonstrate the architecture.");
-                // Fallback dummy image for assignment demonstration
+                alert("Camera access denied. Using fallback image.");
                 AppState.capturedImageBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="; 
             }
         }
@@ -188,7 +195,7 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Privacy Engine: Add Invisible Forensic Watermark
+                // Add Invisible Forensic Watermark
                 ctx.fillStyle = "rgba(255,255,255,0.1)";
                 ctx.font = "20px Arial";
                 ctx.fillText(`Captured: ${new Date().toISOString()}`, 10, 30);
@@ -208,33 +215,37 @@
             const payload = {
                 name: document.getElementById('contact-name').value,
                 message: document.getElementById('wish-message').value,
-                theme: document.getElementById('theme-selector').value,
                 image: AppState.capturedImageBase64,
                 timestamp: Date.now(),
                 exp: Date.now() + (72 * 60 * 60 * 1000), // 72 Hours
                 views: 0, maxViews: 1
             };
 
-            setTimeout(() => { appendLog("AI Moment Detected. Compiling payload..."); }, 500);
+            const userPassword = document.getElementById('wish-password').value;
+
+            setTimeout(() => { appendLog("Compiling payload..."); }, 500);
             
             // 2. Generate Key & Encrypt (AES-256)
             setTimeout(() => {
-                appendLog("Generating ECDH-P384/AES-256 Key...");
+                appendLog("Generating Random URL Token...");
                 const secretKey = CryptoJS.lib.WordArray.random(256/8).toString();
                 const vaultId = CryptoJS.lib.WordArray.random(128/8).toString();
                 
-                const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(payload), secretKey).toString();
-                appendLog("Content Encrypted successfully.");
+                // COMPOSITE ENCRYPTION: We combine the random secretKey + userPassword
+                const compositeKey = secretKey + userPassword;
 
-                // 3. Store in Cloud Vault (Simulated via LocalStorage)
-                appendLog("Uploading to Secure Cloud Vault...");
+                appendLog("Encrypting with Composite Key (URL Token + Password)...");
+                const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(payload), compositeKey).toString();
+
+                // 3. Store in Cloud Vault
+                appendLog("Uploading to Secure Vault...");
                 localStorage.setItem(`vault_${vaultId}`, encryptedData);
 
                 // 4. Generate URL
                 const baseUrl = window.location.href.split('?')[0];
                 AppState.secureUrl = `${baseUrl}?wish=${vaultId}#key=${secretKey}`;
                 
-                setTimeout(() => { buildDeliveryModule(AppState.secureUrl); }, 1000);
+                setTimeout(() => { buildDeliveryModule(AppState.secureUrl); }, 1500);
             }, 1000);
         }
 
@@ -249,7 +260,7 @@
 
         function copySecureUrl() {
             navigator.clipboard.writeText(AppState.secureUrl);
-            alert("Secure Link Copied! Send it to the recipient.");
+            alert("Secure Link Copied! Send it, and don't forget to tell them the password!");
         }
 
         function testRecipientView() { window.location.href = AppState.secureUrl; }
@@ -263,7 +274,7 @@
             const vaultId = urlParams.get('wish');
             
             if (vaultId) {
-                // Trigger Recipient View Architecture
+                // Switch to Recipient UI
                 document.getElementById('wearable-device').style.display = 'none';
                 document.getElementById('viewer-device').classList.add('active');
                 
@@ -283,9 +294,13 @@
         };
 
         function authenticateRecipient() {
-            // Simulated Biometric Auth
             const vaultId = new URLSearchParams(window.location.search).get('wish');
             const secretKey = window.location.hash.substring(5); // Extract #key=
+            const enteredPassword = document.getElementById('recipient-password').value;
+
+            if (!enteredPassword) {
+                alert("Please enter the password."); return;
+            }
 
             const encryptedBlob = localStorage.getItem(`vault_${vaultId}`);
             
@@ -295,11 +310,20 @@
             }
 
             try {
-                // Client-Side Decryption
-                const bytes = CryptoJS.AES.decrypt(encryptedBlob, secretKey);
-                const decryptedPayload = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                // Reconstruct the Composite Key
+                const compositeKey = secretKey + enteredPassword;
 
-                // Verification Constraints (Self-Destruct Logic)
+                // Client-Side Decryption
+                const bytes = CryptoJS.AES.decrypt(encryptedBlob, compositeKey);
+                const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+
+                if (!decryptedString) {
+                    throw new Error("Wrong Password"); // Triggers the catch block
+                }
+
+                const decryptedPayload = JSON.parse(decryptedString);
+
+                // Verification Constraints
                 if (Date.now() > decryptedPayload.exp) {
                     localStorage.removeItem(`vault_${vaultId}`);
                     alert("This wish has expired."); return;
@@ -309,19 +333,24 @@
                     alert("Maximum views reached. Wish self-destructed."); return;
                 }
 
-                // Increment View & Save (Simulating Server State)
+                // Increment View & Self-Destruct trigger
                 decryptedPayload.views += 1;
-                const reEncrypted = CryptoJS.AES.encrypt(JSON.stringify(decryptedPayload), secretKey).toString();
-                localStorage.setItem(`vault_${vaultId}`, reEncrypted);
-                
                 if (decryptedPayload.views >= decryptedPayload.maxViews) {
                      localStorage.removeItem(`vault_${vaultId}`); // Auto-purge
+                } else {
+                     const reEncrypted = CryptoJS.AES.encrypt(JSON.stringify(decryptedPayload), compositeKey).toString();
+                     localStorage.setItem(`vault_${vaultId}`, reEncrypted);
                 }
 
                 renderAnimationEngine(decryptedPayload);
 
             } catch (e) {
-                alert("Decryption Failed: Invalid access key.");
+                // Shake effect on wrong password
+                const passInput = document.getElementById('recipient-password');
+                passInput.style.borderColor = "var(--danger)";
+                passInput.value = "";
+                passInput.placeholder = "Wrong Password";
+                setTimeout(() => { passInput.style.borderColor = "var(--accent)"; passInput.placeholder = "••••"; }, 1500);
             }
         }
 
@@ -343,7 +372,7 @@
             }
 
             // 3. Watermark Layer
-            document.getElementById('forensic-watermark').innerText = `Viewed by ${data.name} | ${new Date().toISOString()} | Do Not Share`;
+            document.getElementById('forensic-watermark').innerText = `Viewed by ${data.name} | ${new Date().toISOString()}`;
 
             // 4. Particle Effects
             const duration = 5 * 1000;
